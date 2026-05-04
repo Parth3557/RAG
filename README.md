@@ -173,7 +173,7 @@ This project is for **educational purposes only**. The PDFs in the `data/` folde
 
 ---
 
-## 🙏 Acknowledgements
+## Acknowledgements
 
 - [Hugging Face](https://huggingface.co/) — Inference API & Sentence-Transformers
 - [FAISS](https://github.com/facebookresearch/faiss) — Vector similarity search
