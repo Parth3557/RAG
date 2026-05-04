@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>The Nocturnal Scholar | ML Study Assistant</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        ::-webkit-scrollbar {
+            width: 4px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #262626;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #c799ff;
+        }
+        
+        /* Pulse for typing */
+        .typing-pulse {
+            display: inline-block;
+            width: 8px; height: 8px;
+            background: #ffffff;
+            border-radius: 50%;
+            margin: 0 3px;
+            animation: bounce 1.4s infinite ease-in-out both;
+        }
+        .typing-pulse:nth-child(1) { animation-delay: -0.32s; }
+        .typing-pulse:nth-child(2) { animation-delay: -0.16s; }
+        @keyframes bounce { 
+            0%, 80%, 100% { transform: scale(0); }
+            40% { transform: scale(1); }
+        }
+    </style>
+    <script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "surface-tint": "#c799ff",
+                      "surface-variant": "#262626",
+                      "on-primary": "#440080",
+                      "secondary-container": "#672889",
+                      "primary-fixed": "#bc87fe",
+                      "surface-container-lowest": "#000000",
+                      "surface-container-high": "#201f1f",
+                      "primary": "#c799ff",
+                      "tertiary-container": "#fd7e94",
+                      "secondary": "#d793fa",
+                      "on-primary-fixed-variant": "#40007a",
+                      "outline-variant": "#484847",
+                      "tertiary": "#ff94a4",
+                      "error-dim": "#d73357",
+                      "tertiary-fixed": "#ff90a1",
+                      "surface-container-low": "#131313",
+                      "on-primary-fixed": "#000000",
+                      "tertiary-dim": "#f3778c",
+                      "surface": "#0e0e0e",
+                      "surface-container": "#1a1919",
+                      "on-tertiary-fixed": "#390010",
+                      "outline": "#767575",
+                      "primary-container": "#bc87fe",
+                      "on-secondary": "#4c056e",
+                      "on-error-container": "#ffb2b9",
+                      "secondary-fixed-dim": "#e6b0ff",
+                      "on-secondary-fixed-variant": "#723494",
+                      "secondary-fixed": "#edc2ff",
+                      "surface-bright": "#2c2c2c",
+                      "on-tertiary-container": "#56001c",
+                      "tertiary-fixed-dim": "#fa7c91",
+                      "surface-container-highest": "#262626",
+                      "inverse-on-surface": "#565555",
+                      "on-error": "#490013",
+                      "on-background": "#ffffff",
+                      "primary-dim": "#ba85fb",
+                      "on-secondary-container": "#edc1ff",
+                      "on-secondary-fixed": "#531074",
+                      "primary-fixed-dim": "#af7aef",
+                      "inverse-primary": "#7744b5",
+                      "surface-dim": "#0e0e0e",
+                      "on-surface": "#ffffff",
+                      "error-container": "#a70138",
+                      "inverse-surface": "#fcf9f8",
+                      "on-primary-container": "#340064",
+                      "secondary-dim": "#c986eb",
+                      "error": "#ff6e84",
+                      "on-tertiary": "#680826",
+                      "background": "#0e0e0e",
+                      "on-surface-variant": "#adaaaa",
+                      "on-tertiary-fixed-variant": "#71112c"
+              },
+              "fontFamily": {
+                      "headline": ["Inter"],
+                      "body": ["Inter"],
+                      "label": ["Inter"]
+              }
+            },
+          },
+        }
+    </script>
+</head>
+<body class="bg-surface text-on-surface font-body selection:bg-primary/30 h-screen flex overflow-hidden">
+
+    <!-- Main Content Area -->
+    <main class="flex-1 flex flex-col relative bg-surface">
+        <!-- Top Bar -->
+        <header class="bg-[#0e0e0e]/80 backdrop-blur-2xl flex justify-between items-center w-full px-8 py-4 z-50 shadow-[0_20px_40px_rgba(68,0,128,0.06)]">
+            <div class="flex items-center gap-4">
+                <div class="flex flex-col">
+                    <span class="text-lg font-bold tracking-tighter text-[#c799ff]">ML Study Assistant</span>
+                    <div class="flex items-center gap-2">
+                        <div class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse shadow-[0_0_8px_#c799ff]"></div>
+                        <span class="text-[10px] text-on-surface-variant uppercase tracking-widest">Thought Processor Online</span>
+                    </div>
+                </div>
+            </div>
+            <div class="flex items-center gap-4">
+                <button class="p-2 rounded-full hover:bg-[#2c2c2c] transition-colors text-on-surface-variant">
+                    <span class="material-symbols-outlined" data-icon="search">search</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Chat Canvas -->
+        <section id="chatCanvas" class="flex-1 overflow-y-auto p-6 md:p-12">
+            <div id="messages" class="space-y-12 pb-8 flex flex-col">
+                <!-- AI Welcome Message -->
+                <div class="flex flex-col items-start space-y-6 max-w-5xl">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-full bg-secondary-container flex items-center justify-center">
+                            <span class="material-symbols-outlined text-primary text-sm" style="font-variation-settings: 'FILL' 1;">auto_awesome</span>
+                        </div>
+                        <span class="text-[10px] text-primary font-black uppercase tracking-widest">RAG chat</span>
+                    </div>
+                    <div class="bg-surface-container-low/50 backdrop-blur-xl p-8 rounded-2xl border-l-4 border-primary shadow-2xl space-y-6">
+                        <p class="text-on-surface-variant text-lg leading-relaxed">Greetings. I am your specialized ML Study Assistant. Connect me to any concept you wish to explore today.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Input Bar -->
+        <footer class="p-6 md:p-10 bg-gradient-to-t from-surface to-transparent">
+            <div class="max-w-4xl mx-auto relative group">
+                <div class="absolute -inset-1 bg-gradient-to-r from-primary/20 to-secondary/20 rounded-[20px] blur opacity-25 group-focus-within:opacity-100 transition duration-1000"></div>
+                <div class="relative bg-surface-container-highest border border-outline-variant/20 rounded-2xl flex items-center p-2 shadow-2xl">
+
+                    <input id="userInput" class="flex-1 bg-transparent border-none outline-none focus:ring-0 text-on-surface placeholder-outline-variant px-4 py-3 text-lg" placeholder="Explore the depths of machine learning..." autocomplete="off" type="text"/>
+                    <div class="flex items-center gap-2 pr-2">
+
+                        <button id="sendBtn" class="w-12 h-12 flex items-center justify-center bg-gradient-to-br from-primary to-primary-container text-on-primary-fixed rounded-xl shadow-[0_0_15px_rgba(199,153,255,0.4)] hover:scale-105 active:scale-95 transition-all outline-none">
+                            <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">send</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </footer>
+    </main>
+
+    <!-- JS Logic linking to backend -->
+    <script>
+        const chatCanvas = document.getElementById('chatCanvas');
+        const messagesDiv = document.getElementById('messages');
+        const userInput = document.getElementById('userInput');
+        const sendBtn = document.getElementById('sendBtn');
+
+        function appendUserMessage(text) {
+            const html = `
+                <div class="flex flex-col items-end space-y-4 max-w-4xl ml-auto">
+                    <div class="bg-surface-container-high px-6 py-4 rounded-xl rounded-tr-none border border-outline-variant/10 shadow-xl">
+                        <p class="text-on-surface leading-relaxed">${text}</p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="text-[10px] text-outline font-bold uppercase tracking-widest">Student</span>
+                        <div class="w-6 h-6 rounded-full bg-outline flex items-center justify-center"><span class="material-symbols-outlined text-[12px] text-on-surface">person</span></div>
+                    </div>
+                </div>
+            `;
+            messagesDiv.insertAdjacentHTML('beforeend', html);
+            chatCanvas.scrollTop = chatCanvas.scrollHeight;
+        }
+
+        function appendTypingIndicator() {
+            const id = 'typing-' + Date.now();
+            const html = `
+                <div id="${id}" class="flex flex-col items-start space-y-6 max-w-5xl">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-full bg-secondary-container flex items-center justify-center">
+                            <span class="material-symbols-outlined text-primary text-sm" style="font-variation-settings: 'FILL' 1;">auto_awesome</span>
+                        </div>
+                        <span class="text-[10px] text-primary font-black uppercase tracking-widest">Processing</span>
+                    </div>
+                    <div class="bg-surface-container-low/50 backdrop-blur-xl p-6 rounded-2xl border-l-4 border-primary shadow-2xl">
+                        <span class="typing-pulse"></span>
+                        <span class="typing-pulse"></span>
+                        <span class="typing-pulse"></span>
+                    </div>
+                </div>
+            `;
+            messagesDiv.insertAdjacentHTML('beforeend', html);
+            chatCanvas.scrollTop = chatCanvas.scrollHeight;
+            return id;
+        }
+
+        function appendAIMessage(text) {
+            const formattedText = text.replace(/\n/g, '<br/>');
+            const html = `
+                <div class="flex flex-col items-start space-y-6 max-w-5xl">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-full bg-secondary-container flex items-center justify-center">
+                            <span class="material-symbols-outlined text-primary text-sm" style="font-variation-settings: 'FILL' 1;">auto_awesome</span>
+                        </div>
+                        <span class="text-[10px] text-primary font-black uppercase tracking-widest">RAG chat</span>
+                    </div>
+                    <div class="bg-surface-container-low/50 backdrop-blur-xl p-8 rounded-2xl border-l-4 border-primary shadow-2xl space-y-6">
+                        <p class="text-on-surface-variant text-lg leading-relaxed">${formattedText}</p>
+                    </div>
+                </div>
+            `;
+            messagesDiv.insertAdjacentHTML('beforeend', html);
+            chatCanvas.scrollTop = chatCanvas.scrollHeight;
+        }
+        function appendChunks(chunks) {
+            if (!chunks || chunks.length === 0) return;
+            
+            let chunksHtml = '<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2 max-w-5xl">';
+            chunks.forEach((chunk, index) => {
+                let snippet = chunk.text.substring(0, 120).replace(/</g, "&lt;").replace(/>/g, "&gt;") + "...";
+                chunksHtml += `
+                    <div class="bg-surface-container-highest p-4 rounded-xl border border-outline-variant/10 shadow-sm transition-all hover:-translate-y-1 hover:border-primary/50 cursor-pointer group" title="${chunk.text.replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-[10px] text-primary font-bold uppercase tracking-widest flex items-center gap-1">
+                                <span class="material-symbols-outlined text-[12px]">library_books</span> Source ${index + 1}
+                            </span>
+                            <span class="text-[10px] text-outline font-mono">Score: ${chunk.score}</span>
+                        </div>
+                        <p class="text-xs text-on-surface-variant font-mono leading-relaxed mb-3">${snippet}</p>
+                        <div class="text-[10px] text-outline flex items-center gap-1 mt-auto">
+                            <span class="material-symbols-outlined text-[10px]">find_in_page</span> Page ${chunk.page}
+                        </div>
+                    </div>
+                `;
+            });
+            chunksHtml += '</div>';
+
+            messagesDiv.insertAdjacentHTML('beforeend', chunksHtml);
+            chatCanvas.scrollTop = chatCanvas.scrollHeight;
+        }
+        function removeTypingIndicator(id) {
+            const el = document.getElementById(id);
+            if (el) el.remove();
+        }
+
+        async function sendMessage() {
+            const text = userInput.value.trim();
+            if(!text) return;
+            
+            appendUserMessage(text);
+            userInput.value = '';
+
+            const typingId = appendTypingIndicator();
+
+            try {
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: text })
+                });
+
+                const data = await response.json();
+                removeTypingIndicator(typingId);
+                
+                if (data.reply) {
+                    appendAIMessage(data.reply);
+                    if (data.chunks && data.chunks.length > 0) {
+                        appendChunks(data.chunks);
+                    }
+                } else {
+                    appendAIMessage("Sorry, an internal error occurred.");
+                }
+            } catch (error) {
+                removeTypingIndicator(typingId);
+                appendAIMessage("Network error. Please make sure the server is running.");
+            }
+        }
+
+        sendBtn.addEventListener('click', sendMessage);
+        userInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') sendMessage();
+        });
+    </script>
+</body>
+</html>
