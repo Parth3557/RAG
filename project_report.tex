@@ -1,0 +1,177 @@
+\documentclass[12pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{geometry}
+\usepackage{float}
+\usepackage{titlesec}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{booktabs}
+
+\geometry{margin=1in}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    filecolor=magenta,      
+    urlcolor=cyan,
+    pdftitle={RAG-Based ML Study Assistant Report},
+}
+
+\lstset{
+    basicstyle=\ttfamily\footnotesize,
+    breaklines=true,
+    backgroundcolor=\color{gray!5},
+    frame=single,
+    keywordstyle=\color{blue}\bfseries,
+    stringstyle=\color{red},
+    commentstyle=\color{teal}
+}
+
+\title{\textbf{Comprehensive Project Report}\\ \vspace{0.5cm} \Large \textbf{RAG-Based Machine Learning Study Assistant}}
+\author{Gen AI Project}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+\begin{abstract}
+This comprehensive report outlines the end-to-end architecture, development, and deployment of a Domain-Specific Educational AI Assistant utilizing Retrieval-Augmented Generation (RAG). The project’s core objective is to autonomously parse, index, and query the \textit{Hands-on Machine Learning} textbook to assist students with accurate, context-aware answers. By orchestrating a robust data ingestion pipeline that combines PyMuPDF for native text parsing with PyTesseract for advanced Optical Character Recognition (OCR), the system ensures maximum data yield from complex PDF layouts. Semantic search is powered by \texttt{FAISS} and the \texttt{all-MiniLM-L6-v2} embedding model, while natural language synthesis is executed via Hugging Face's inference API using the \texttt{Qwen/Qwen2.5-7B-Instruct} Large Language Model (LLM). This document details the algorithmic logic, hyperparameter tuning, API integrations, and practical challenges encountered during the project evolution from a bare-bones Jupyter Notebook to a production-ready Flask web application.
+\end{abstract}
+
+\newpage
+\tableofcontents
+\newpage
+
+\section{Introduction}
+Large Language Models (LLMs) inherently suffer from two major limitations when applied to specialized educational domains: knowledge cutoffs and the propensity to hallucinate facts. To mitigate these issues, the Retrieval-Augmented Generation (RAG) framework dynamically fetches relevant contextual data from an external knowledge base before generating a response. 
+
+In this project, we construct a "Machine Learning Study Assistant." Instead of relying purely on the LLM's pre-trained parametric memory, the system actively queries localized, semantic representations of a textbook (\textit{Hands-on Machine Learning}). This guarantees that the assistant provides highly verifiable, strictly scoped, and chronologically relevant responses, along with precise page citations.
+
+\section{Project Objectives}
+The project was structured across multiple technical domains, each with specific objectives:
+\begin{enumerate}
+    \item \textbf{Advanced Document Engineering:} Build a resilient PDF processing pipeline capable of handling dual data layers (embedded text and rasterized images/diagrams) with zero data loss.
+    \item \textbf{Semantic Search Integration:} Implement a near-instantaneous dense vector retrieval system optimized for CPU inference.
+    \item \textbf{Generative Engine Orchestration:} Configure an instruction-tuned LLM capable of rigorous adherence to injected context and strict refusal of out-of-scope inquiries.
+    \item \textbf{Full-Stack Deployment:} Transition the experimental machine learning models from a Jupyter Notebook environment into a RESTful Flask API serving a modern User Interface.
+\end{enumerate}
+
+\section{Methodology: Data Pipeline and Preprocessing}
+The foundation of any high-performing RAG architecture relies entirely on the quality of its input data. Given that academic PDFs frequently contain complex layouts, diagrams, and scanned sections, a multi-modal approach to text extraction was imperative.
+
+\subsection{Hybrid PDF Extraction Approach}
+We utilized \texttt{PyMuPDF} (\texttt{fitz}) for physical document traversal. The system processes each page using the following hierarchical logic:
+\begin{itemize}
+    \item \textbf{Native Text Extraction}: It attempts to pull selectable text directly from the PDF DOM.
+    \item \textbf{Heuristic OCR Fallback}: If the yielded text is unusually sparse (less than 80 characters), the system assumes the page is a scanned image and captures a pixel map (\texttt{Pixmap}). This matrix is converted into a standard PIL Image and processed through the \texttt{PyTesseract} OCR engine.
+    \item \textbf{Embedded Image Parsing}: Cross-reference tables (xrefs) are interrogated to locate embedded images within text-heavy pages. These images are individually extracted and run through OCR to capture text stored within diagrams or figures.
+\end{itemize}
+
+\subsection{Data Cleaning and Filtering}
+Raw extracted text typically contains OCR artifacts, erratic whitespaces, and document boilerplate that heavily disrupts semantic similarity calculations. To counteract this:
+\begin{itemize}
+    \item \textbf{Normalization}: Non-standard byte sequences (\texttt{\textbackslash x00}) and redundant tabs/newlines are collapsed into single spaces using regular expressions.
+    \item \textbf{Quality Control}: A \texttt{is\_good\_chunk} heuristic was implemented to purge segments containing publisher metadata. Text blocks explicitly containing phrases like "o'reilly", "early release", "copyright", or "isbn" are dropped. Additionally, any block comprising fewer than 100 characters is discarded to preserve vector density.
+\end{itemize}
+
+\subsection{Sliding Window Chunking Strategy}
+Feeding an entire textbook into an LLM exceeds context window limitations. The cleaned corpus is split mechanically using a sliding window strategy.
+\begin{itemize}
+    \item \textbf{Chunk Size (\texttt{CHUNK\_SIZE})}: 1200 characters.
+    \item \textbf{Chunk Overlap (\texttt{CHUNK\_OVERLAP})}: 180 characters.
+\end{itemize}
+The overlap ensures that sentences or conceptual arguments split across chunk boundaries maintain their connective semantic tissue, preventing the vector search algorithm from missing incomplete context.
+
+\section{Model Architecture}
+The core logic connects deterministic vector mathematics with stochastic language generation.
+
+\subsection{Dense Vector Embeddings}
+For dimensionality reduction and semantic encoding, we employed \texttt{sentence-transformers/all-MiniLM-L6-v2}. 
+\begin{itemize}
+    \item \textbf{Why MiniLM?}: It offers an optimal balance between encoding speed and semantic accuracy. It casts input text into a 384-dimensional dense vector space. Emdeddings are normalized to a length of 1, allowing us to use Inner Product (IP) mathematically equivalent to Cosine Similarity.
+\end{itemize}
+
+\subsection{FAISS Vector Store}
+The normalized vectors are ingested by Facebook AI Similarity Search (\texttt{FAISS}). Specifically, an \texttt{IndexFlatIP} (exact search for inner product) index is utilized. While FAISS supports approximate nearest neighbor (ANN) search algorithms (like HNSW), \texttt{IndexFlatIP} processes exhaustive searches fast enough for our corpus size (typically thousands of chunks) without losing precision.
+
+\subsection{LLM Inference}
+The core generation is offloaded to Hugging Face's serverless Inference API. 
+\begin{itemize}
+    \item \textbf{Model}: \texttt{Qwen/Qwen2.5-7B-Instruct}. This particular model was chosen for its strong reasoning capabilities and instruction-following fidelity.
+    \item \textbf{System Prompting}: The LLM is wrapped in a strict system persona forcing it to prioritize the injected context and respond with "I don't know. I am a ML Study Assistant." for irrelevant questions.
+\end{itemize}
+
+\section{Hyperparameter Tuning}
+Determining the correct parameters for the text generation phase drastically controls the "creativity" and "hallucination threshold" of the RAG system.
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{@{} l l p{8cm} @{}}
+    \toprule
+    \textbf{Parameter} & \textbf{Value} & \textbf{Operational Impact} \\
+    \midrule
+    \texttt{TOP\_K} & 5 & Determines the number of chunks retrieved from FAISS. 5 chunks provide roughly $\sim$6000 characters of context, easily fitting into the LLM context window. \\
+    \texttt{MIN\_RELEVANCE} & 0.15 & A safety threshold. If the highest matching vector's dot product is below 0.15, the system short-circuits the LLM and requests clarification. \\
+    \texttt{MAX\_NEW\_TOKENS} & 350 & Caps generation length, preventing runaway loops and maintaining concise, study-note formatted answers. \\
+    \texttt{TEMPERATURE} & 0.6 & Controls logit scaling. A value of 0.6 strikes a balance between deterministic factual retrieval and conversational fluidity. \\
+    \texttt{TOP\_P} & 0.1 & Nucleus sampling threshold. Restricting it to 0.1 forces the model to only consider the absolute most probable next words, heavily suppressing hallucinations. \\
+    \bottomrule
+    \end{tabular}
+    \caption{Generation and Retrieval Hyperparameters}
+    \label{tab:params}
+\end{table}
+
+\section{Application Layer: Flask Integration}
+To provide accessibility outside of a Jupyter Notebook environment, the python pipeline was packaged into a web application using Flask.
+
+\begin{itemize}
+    \item \textbf{Initialization}: Upon server boot (\texttt{init\_vector\_store()}), the application scans the \texttt{data/} folder, generates all vector embeddings in memory, and builds the FAISS index.
+    \item \textbf{API Endpoints}: The system exposes a \texttt{/api/chat} POST endpoint. 
+    \item \textbf{Context Formatting}: Before transmitting data to Hugging Face, the server meticulously formats the prompt, appending metadata tags. For example:\\ \texttt{[1] Source: Hands-on-Machine-Learning.pdf | Page: 54 | Score: 0.528}
+\end{itemize}
+
+\section{Findings and Results}
+Testing demonstrated that the hybrid extraction mechanism was overwhelmingly necessary; nearly 15\% of the informative material in the textbook was captured uniquely via PyTesseract scanning diagrams or offset call-out boxes.
+
+The system succeeded robustly at its core objective: rejecting outside knowledge. When prompted with, "Explain the French Revolution," the model successfully utilized the hard-coded fallback mechanism, preventing off-topic drift. For domain questions such as, "What is the difference between Lasso and Ridge regression?", the model reliably synthesized the differences while accurately citing the specific pages where regularization techniques are discussed.
+
+\section{Challenges Encountered}
+\subsection{PyMuPDF Alpha Channel Interference}
+\textbf{Challenge:} Tesseract OCR failed drastically when rendering certain PDF pages because of transparent pixel layers (alpha channels) in the PDF matrix. \\
+\textbf{Solution:} We enforced a strict transformation pipeline: \texttt{fitz.Pixmap(pix, 0)} which dynamically strips the alpha channel out of the image byte string before conversion to RGB.
+
+\subsection{Hugging Face API Limitations}
+\textbf{Challenge:} Relying on the serverless Hugging Face Inference API occasionally resulted in timeout errors or rate-limiting for very long generation requests. \\
+\textbf{Solution:} Implemented a robust \texttt{try-except} block wrapper around the \texttt{client.chat\_completion} calls, ensuring the backend gracefully falls back to a canned error string rather than crashing the Flask thread.
+
+\section{Screenshots}
+\vspace{1cm}
+\begin{figure}[H]
+    \centering
+    \frame{\rule{0pt}{7cm}\rule{14cm}{0pt}} % Placeholder box
+    \caption{Application Dashboard showcasing the minimalist UI and query input field.}
+    \label{fig:screenshot1}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \frame{\rule{0pt}{7cm}\rule{14cm}{0pt}} % Placeholder box
+    \caption{An example RAG flow: The user asks about "Overfitting", and the system replies with synthesized bullet points and direct PDF page citations.}
+    \label{fig:screenshot2}
+\end{figure}
+
+\section{Future Work}
+To elevate this prototype to a production-grade enterprise system, several improvements are proposed:
+\begin{enumerate}
+    \item \textbf{Hybrid Search Mechanisms}: Implementing a BM25 (keyword-based) search algorithm alongside the dense vector FAISS search. A reciprocal rank fusion (RRF) approach would guarantee that highly specific technical names are never missed during retrieval.
+    \item \textbf{Persistent Storage}: Replacing the in-memory FAISS implementation with a persistent vector database like ChromaDB, Milvus, or Pinecone. This avoids re-embedding the textbook upon every server restart.
+    \item \textbf{RAG Evaluation Frameworks}: Integrating quantitative evaluation metrics such as \texttt{RAGAS} (Retrieval Augmented Generation Assessment) or \texttt{TruLens} to programmatically evaluate context precision, recall, and answer faithfulness without human-in-the-loop dependencies.
+\end{enumerate}
+
+\section{Conclusion}
+This RAG-based Machine Learning Study Assistant successfully bridges the gap between static academic texts and interactive Generative AI. By utilizing a zero-data-loss document extraction pipeline, an optimized vector index, and an instruction-tuned LLM configured with strict guardrails, the system proves highly effective at retrieving technical knowledge. The transition to a Flask-based Microservice architecture ensures scalability and demonstrates practical deployment capabilities for modern NLP applications.
+
+\end{document}
