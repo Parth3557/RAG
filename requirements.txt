@@ -6,4 +6,4 @@ pytesseract==0.3.13
 sentence-transformers==5.4.1
 faiss-cpu==1.13.2
 huggingface_hub==1.13.0
-numpy==2.4.4
+numpy==2.4.4  
